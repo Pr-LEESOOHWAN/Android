@@ -8,61 +8,50 @@ import android.content.Intent
 import android.content.Context
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.provider.MediaStore.Audio
 import android.widget.SeekBar
+import android.view.View
 
 
-class MainActivity : AppCompatActivity() {
+class YourActivity : AppCompatActivity() {
 
-    private var originalVolume: Int=0
-    private lateinit var mediaPlayer: MediaPlayer
+    private lateinit var audioManager: AudioManager
     private lateinit var volumeSeekBar: SeekBar
+    private var isVolumeLocked = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // AudioManager 초기화
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        // AudioManager 인스턴스 가져오기
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-        // 현재 볼륨 상태 저장
-        originalVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        // 볼륨 조절 이벤트 감지
+        volumeControlStream = AudioManager.STREAM_MUSIC
 
-        // 특정 앱 실행 (예: Google Chrome)
-        val intent = packageManager.getLaunchIntentForPackage("com.android.chrome")
-        startActivity(intent)
+        // 사용자가 원하는 볼륨 값으로 초기화
+        volumeSeekBar.progress = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
 
-        // 앱에서 제공하는 소리 재생(예: Raw 리소스 파일 사용)
-        mediaPlayer = MediaPlayer.create(this, R.raw.your_app_sound)
-        mediaPlayer.isLooping = true
-        mediaPlayer.start()
-
-        // 볼륨을 50%로 설정
-        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-        val desiredVolume = (0.5 * maxVolume).toInt()
-        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, desiredVolume, 0)
-
-        // 사용자의 소리 조절을 비활성화
-        volumeSeekBar = findViewById(R.id.volulmeSeekBar) // SeekBar ID를 적절히 변경해야함
-        volumeSeekBar.isEnabled = false
+        //SeekBar 변경 이벤트 리스너 등록
+        volumeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress : Int, fromUser: Boolean) {
+                // 사용자가 SeekBar를 조절하면 볼륨 값을 변경
+                if (fromUser && !isVolumeLocked) {
+                    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, progress, 0)
+                }
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?){
+                // 사용자가 SeekBar 조절을 시작할 때 동작
+            }
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                // 사용자가 SeekBar 조절을 멈출 때 동작
+            }
+        })
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-
-        // 앱이 종료될 때 볼륨을 원래 상태로 복구하고 소리 정지
-        val audioManager = getSystemSerivce(Context.AUDIO_SERVICE) as AudioManager
-        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, originalVolume, 0)
-
-        mediaPlayer.stop()
-        mediaPlayer.release()
-}
-
-    external fun stringFromJNI(): String
-
-    companion object {
-        // Used to load the 'myapplication' library on application startup.
-        init {
-            System.loadLibrary("myapplication")
-        }
+    // Lock 버튼 클릭 이벤트
+    fun onLockButtonClick(view: View) {
+        // Lock 버튼을 누를 때, 볼륨 조절이 잠겨있는지 여부를 업데이트
+        isVolumeLocked = !isVolumeLocked
     }
 }

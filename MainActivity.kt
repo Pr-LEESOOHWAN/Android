@@ -1,9 +1,9 @@
 package com.example.myapplication
 
+import android.app.ActivityManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.TextView
-import com.example.myapplication.databinding.ActivityMaandroid.content.Context
 import android.content.Intent
 import android.content.Context
 import android.media.AudioManager
@@ -18,6 +18,7 @@ class YourActivity : AppCompatActivity() {
     private lateinit var audioManager: AudioManager
     private lateinit var volumeSeekBar: SeekBar
     private var isVolumeLocked = false
+    private val lockedPackageName = "com.HaHa.lockedapp" //실제 HaHa의 패키지 이름 넣어야함.
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,7 +35,7 @@ class YourActivity : AppCompatActivity() {
 
         //SeekBar 변경 이벤트 리스너 등록
         volumeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress : Int, fromUser: Boolean) {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 // 사용자가 SeekBar를 조절하면 볼륨 값을 변경
                 if (fromUser && !isVolumeLocked) {
                     audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, progress, 0)
@@ -49,9 +50,28 @@ class YourActivity : AppCompatActivity() {
         })
     }
 
-    // Lock 버튼 클릭 이벤트
-    fun onLockButtonClick(view: View) {
-        // Lock 버튼을 누를 때, 볼륨 조절이 잠겨있는지 여부를 업데이트
-        isVolumeLocked = !isVolumeLocked
+    override fun onResume() {
+        super.onResume()
+        // 특정 앱이 실행 중일 때 볼륨 조절 잠그기
+        if(isAppRunning(lockedPackageName)) {
+            isVolumeLocked = true
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // 앱이 종료되면 볼륨 조절 잠금 해제
+        isVolumeLocked = false
+    }
+
+    private fun isAppRunning(packageName: String): Boolean {
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val runningAppProcesses = activityManager.runningAppProcesses
+        runningAppProcesses.forEach { processInfo ->
+            if(processInfo.processName == packageName) {
+                return true
+            }
+        }
+        return false
     }
 }
